@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Móveis Pra Já | Catálogo & Lookbook</title>
+  <title>Móveis Pra Já | Catálogo Digital</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
@@ -125,11 +125,10 @@
       width: 100%;
     }
 
-    /* Nova configuração para mostrar todas as categorias em grade */
     .categories-list {
       display: flex;
       flex-wrap: wrap;
-      gap: 1.5rem 1.2rem; /* Espaço vertical e horizontal */
+      gap: 1.5rem 1.2rem;
       padding: 1rem 0.5rem;
       max-width: 100%;
       justify-content: center;
@@ -141,17 +140,23 @@
       align-items: center;
       gap: 0.6rem;
       cursor: pointer;
-      width: 78px; /* Tamanho fixo para alinhar perfeitamente */
+      width: 78px;
       opacity: 0.65;
       transition: all 0.2s ease;
+      -webkit-tap-highlight-color: transparent; /* Remove a pisca azul no clique do celular */
     }
 
-    .category-item:hover, .category-item.active {
+    .category-item.active {
       opacity: 1;
     }
 
+    /* Aplica o hover apenas em computadores, evitando bug de toque duplo em celulares */
+    @media (hover: hover) {
+      .category-item:hover { opacity: 1; }
+    }
+
     .cat-thumb {
-      width: 76px; /* Levemente menor para caber melhor na grade */
+      width: 76px;
       height: 76px;
       border-radius: 50%;
       border: 2px solid transparent;
@@ -169,6 +174,11 @@
       border-color: var(--accent);
       box-shadow: 0 0 16px rgba(212, 163, 115, 0.4);
       transform: scale(1.06);
+    }
+
+    /* O pointer-events: none impede que a imagem e o texto roubem o clique principal no celular */
+    .cat-thumb *, .cat-name {
+      pointer-events: none;
     }
 
     .cat-thumb img {
@@ -885,6 +895,15 @@
         btn.classList.add("active");
         activeCategory = btn.dataset.cat;
         renderProducts();
+
+        // Efeito aplicativo: no celular, rola suavemente para baixo para mostrar os produtos filtrados
+        if (window.innerWidth < 900) {
+          const searchInput = document.getElementById("searchInput");
+          if (searchInput) {
+            const y = searchInput.getBoundingClientRect().top + window.scrollY - 80;
+            window.scrollTo({top: y, behavior: 'smooth'});
+          }
+        }
       });
     });
 
