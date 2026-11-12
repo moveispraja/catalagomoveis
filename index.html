@@ -55,6 +55,7 @@
       font-weight: 700;
       letter-spacing: -0.5px;
       color: #fff;
+      cursor: pointer;
     }
 
     .brand-title span { color: var(--accent); }
@@ -146,14 +147,11 @@
       width: 78px;
       opacity: 0.65;
       transition: all 0.2s ease;
-      -webkit-tap-highlight-color: transparent; /* Remove a pisca azul no clique do celular */
+      -webkit-tap-highlight-color: transparent;
     }
 
-    .category-item.active {
-      opacity: 1;
-    }
+    .category-item.active { opacity: 1; }
 
-    /* Aplica o hover apenas em computadores, evitando bug de toque duplo em celulares */
     @media (hover: hover) {
       .category-item:hover { opacity: 1; }
     }
@@ -179,10 +177,7 @@
       transform: scale(1.06);
     }
 
-    /* O pointer-events: none impede que a imagem e o texto roubem o clique principal no celular */
-    .cat-thumb *, .cat-name {
-      pointer-events: none;
-    }
+    .cat-thumb *, .cat-name { pointer-events: none; }
 
     .cat-thumb img {
       width: 100%;
@@ -338,6 +333,21 @@
       color: #fff;
     }
 
+    .btn-whatsapp-card {
+      background-color: #25D366;
+      color: #fff;
+      border: none;
+      padding: 0.35rem 0.65rem;
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .btn-whatsapp-card:hover { background-color: #20ba5a; }
+
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -423,6 +433,7 @@
       max-height: 65vh;
       object-fit: contain;
       background: #050505;
+      cursor: pointer;
     }
 
     .lightbox-bar {
@@ -617,7 +628,7 @@
   <!-- MODAL DE VISUALIZAÇÃO (LIGHTBOX) -->
   <div class="modal-overlay" id="lightboxModal">
     <div class="lightbox-box">
-      <img id="lightboxImg" class="lightbox-img" src="" alt="Imagem ampliada">
+      <img id="lightboxImg" class="lightbox-img" src="" alt="Imagem ampliada" title="Clique para enviar foto no WhatsApp">
       <div class="lightbox-bar">
         <div>
           <h3 id="lightboxTitle" style="font-size: 1.15rem; margin-bottom: 0.2rem;"></h3>
@@ -625,7 +636,7 @@
           <span id="lightboxPrice" style="color: var(--accent); font-weight: 700; font-size: 1.1rem;"></span>
         </div>
         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 10px;">
-          <a class="btn" id="btnZapLightbox" href="" target="_blank" style="background-color: #25D366; color: white; border: none; font-weight: bold;">📲 Enviar p/ WhatsApp</a>
+          <button class="btn" id="btnZapLightbox" style="background-color: #25D366; color: white; border: none; font-weight: bold;">📲 Enviar Foto p/ WhatsApp</button>
           <button class="btn btn-primary" id="btnCopyDetails">Copiar Detalhes</button>
           <button class="btn btn-secondary" onclick="closeModals()">Fechar</button>
         </div>
@@ -700,6 +711,29 @@
       });
     }
 
+    // Função universal para partilhar APENAS a foto real via WhatsApp / Sistema
+    window.enviarFoto = async function(imageUrl) {
+      if (!imageUrl) return;
+      showToast("A preparar imagem para envio...");
+      try {
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        const file = new File([blob], "movel-catalogo.jpg", { type: blob.type });
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'Móvel Catálogo',
+          });
+        } else {
+          // Se o navegador não suportar partilha de ficheiro direta, abre a imagem numa nova aba
+          window.open(imageUrl, '_blank');
+        }
+      } catch (error) {
+        console.log("Partilha cancelada ou não suportada", error);
+      }
+    };
+
     onSnapshot(productsCol, (snapshot) => {
       products = [];
       snapshot.forEach(docSnap => {
@@ -762,7 +796,10 @@
             <p class="card-details">${item.details || ''}</p>
             <div class="card-footer">
               <span class="card-price">R$ ${item.price}</span>
-              ${adminButtonsHTML}
+              <div style="display: flex; gap: 0.4rem; align-items: center;">
+                <button class="btn-whatsapp-card" onclick="enviarFoto('${item.imageUrl}')">📲 Enviar Foto</button>
+                ${adminButtonsHTML}
+              </div>
             </div>
           </div>
         `;
@@ -859,14 +896,17 @@
       const item = products.find(p => p.id === id);
       if (!item) return;
 
-      document.getElementById("lightboxImg").src = item.imageUrl;
+      const lightboxImg = document.getElementById("lightboxImg");
+      lightboxImg.src = item.imageUrl;
+      // Clicar diretamente na foto ampliada também dispara o envio da foto
+      lightboxImg.onclick = () => enviarFoto(item.imageUrl);
+
       document.getElementById("lightboxTitle").innerText = item.name;
       document.getElementById("lightboxDetails").innerText = item.details || "";
       document.getElementById("lightboxPrice").innerText = `R$ ${item.price}`;
       
       const zapBtn = document.getElementById("btnZapLightbox");
-      const zapText = encodeURIComponent(`Olá, gostei deste móvel do catálogo:\n\n*${item.name}*\nPreço: R$ ${item.price}\n\nVeja a foto: ${item.imageUrl}`);
-      zapBtn.href = `https://api.whatsapp.com/send?text=${zapText}`;
+      zapBtn.onclick = () => enviarFoto(item.imageUrl);
       
       const copyBtn = document.getElementById("btnCopyDetails");
       copyBtn.onclick = () => {
@@ -899,7 +939,6 @@
         activeCategory = btn.dataset.cat;
         renderProducts();
 
-        // Efeito aplicativo: no celular, rola suavemente para baixo para mostrar os produtos filtrados
         if (window.innerWidth < 900) {
           const searchInput = document.getElementById("searchInput");
           if (searchInput) {
